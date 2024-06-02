@@ -20,18 +20,15 @@ main(int argc, char *argv[])
     char buf[1];
 
     // pipe1 in child: child reads
-    close(0);
-    dup(pipe1[0]);
-    close(pipe1[0]);
     close(pipe1[1]);
-    if(read(0, buf, sizeof(buf))) {
+    if(read(pipe1[0], buf, sizeof(buf))) {
       printf("%d: received ping\n", getpid());
     }
 
     // pipe2 in child: child writes
     close(pipe2[0]);
     write(pipe2[1], buf, sizeof(buf));
-    close(pipe2[1]);
+    //close(pipe2[1]);
 
     exit(0);
   }
@@ -45,11 +42,8 @@ main(int argc, char *argv[])
     wait((int*)0); // wait for child to write
 
     // pipe2 in parent: parent reads
-    close(0);
-    dup(pipe2[0]);
-    close(pipe2[0]);
     close(pipe2[1]);
-    if(read(0, buf, sizeof(buf))) {
+    if(read(pipe2[0], buf, sizeof(buf))) {
       printf("%d: received pong\n", getpid());
     }
 
