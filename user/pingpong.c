@@ -25,7 +25,7 @@ main(int argc, char *argv[])
     close(pipe1[0]);
     close(pipe1[1]);
     if(read(0, buf, sizeof(buf))) {
-      printf("%d:received ping\n", getpid());
+      printf("%d: received ping\n", getpid());
     }
 
     // pipe2 in child: child writes
@@ -50,7 +50,7 @@ main(int argc, char *argv[])
     close(pipe2[0]);
     close(pipe2[1]);
     if(read(0, buf, sizeof(buf))) {
-      printf("%d:received pong\n", getpid());
+      printf("%d: received pong\n", getpid());
     }
 
     exit(0);

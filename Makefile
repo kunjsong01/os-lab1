@@ -190,8 +190,6 @@ UPROGS=\
 	$U/_zombie\
 	$U/_sleep\
 	$U/_pingpong\
-	$U/_ex7processcomm
-
 
 
 ifeq ($(LAB),$(filter $(LAB), lock))
