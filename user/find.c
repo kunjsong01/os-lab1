@@ -3,7 +3,7 @@
 #include "kernel/fs.h"
 
 void
-find()
+find(char *path, char *target)
 {
   int fd;
   struct dirent e;
@@ -14,11 +14,18 @@ find()
       printf("%s\n", e.name);
     }
   }
-  exit(0);
+  close(fd);
 }
 
 int
-main() {
-  find();
+main(int argc, char *argv[])
+{
+  if(argc <= 1 || argc > 3){
+    fprintf(2, "usage: find [path] [filename]\n");
+    exit(1);
+  }
+
+  find(argv[1], argv[2]);
+
   exit(0);
 }
