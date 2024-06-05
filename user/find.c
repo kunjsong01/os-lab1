@@ -10,7 +10,7 @@ find(char *path, char *target)
 
   fd = open(".", 0);
   while(read(fd, &e, sizeof(e)) == sizeof(e)){
-    if(e.name[0] != '\0'){
+    if(e.name[0] != '\0' && strcmp(target, e.name) == 0){
       printf("%s\n", e.name);
     }
   }
@@ -20,7 +20,7 @@ find(char *path, char *target)
 int
 main(int argc, char *argv[])
 {
-  if(argc <= 1 || argc > 3){
+  if(argc != 3){
     fprintf(2, "usage: find [path] [filename]\n");
     exit(1);
   }
