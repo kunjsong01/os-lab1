@@ -191,7 +191,9 @@ UPROGS=\
 	$U/_sleep\
 	$U/_pingpong\
 	$U/_ex9\
-	$U/_find
+	$U/_find\
+	$U/_xargs
+
 
 
 ifeq ($(LAB),$(filter $(LAB), lock))
