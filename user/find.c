@@ -2,9 +2,9 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 #include "kernel/fs.h"
-#include "kernel/fcntl.h"
 
-char* fmtname(char *path)
+char*
+fmtname(char *path)
 {
   static char buf[DIRSIZ+1];
   char *p;
@@ -14,80 +14,105 @@ char* fmtname(char *path)
     ;
   p++;
 
-  // Return blank-padded name.
+  // Return name, ended with a null character
   if(strlen(p) >= DIRSIZ)
     return p;
   memmove(buf, p, strlen(p));
-  memset(buf+strlen(p), ' ', DIRSIZ-strlen(p));
+  memset(buf+strlen(p), '\0', DIRSIZ-strlen(p));
   return buf;
 }
 
-void find(char *path, char *fileName) {
-  printf("find: searching %s recursively in %s\n", fileName, path);
-  char buf[512], *p;
-  int fd;
+// the method uses a shared buf which is quite confusing
+// "open" just opens a directory ONLY! it cannot open a file in lab1's XV6!
+void
+searchDir(char *path, char *buf, int fd, struct stat st, char *search)
+{
+  char *p;
   struct dirent de;
-  struct stat st;
-  char* cwd = ".";
-  char* pd = "..";
+  struct stat st2;
 
-  if((fd = open(path, O_RDONLY)) < 0){
+  //printf("find - begin: path=%s, buf=%s\n", path, buf);
+
+  if(strlen(path) + 1 + DIRSIZ + 1 > 512){
+    printf("find: path too long\n");
+  }
+  strcpy(buf, path);
+  p = buf+strlen(buf);
+  *p++ = '/';
+
+  // Iterate through directory contents
+  while(read(fd, &de, sizeof(de)) == sizeof(de)){
+    if(de.inum == 0)
+      continue;
+    memmove(p, de.name, DIRSIZ);
+    p[DIRSIZ] = 0;
+    if(stat(buf, &st) < 0){
+      printf("find: cannot stat %s\n", buf);
+      continue;
+    }
+    // Only look for files - search through DIRs and ignore CONSOLEs
+    if (st.type == T_DIR) {
+      if (strcmp(fmtname(buf), ".") != 0 && strcmp(fmtname(buf), "..") != 0) {
+        // Get new metadata for directory file
+        int fd2 = open(buf, 0);
+        // Path must have stats
+        if(fstat(fd, &st2) < 0){
+          fprintf(2, "find: cannot stat %s\n", path);
+          close(fd);
+          return;
+        }
+        // Recursive search in found directory
+        searchDir(buf, buf, fd2, st2, search);
+        close(fd2);
+      }
+    } else if (st.type == T_FILE) {
+      if (strcmp(fmtname(buf), search) == 0) {
+        printf("%s\n", buf);
+      }
+    }
+  }
+  //printf("find - end: path=%s, buf=%s\n", path, buf);
+}
+
+void
+find(char *path, char *search)
+{
+  char buf[512];
+  int fd; // Fd of path passed in
+  struct stat st; // Details about path
+
+  // Path must be a directory
+  if((fd = open(path, 0)) < 0){
     fprintf(2, "find: cannot open %s\n", path);
     return;
   }
 
+  // Path must have stats
   if(fstat(fd, &st) < 0){
     fprintf(2, "find: cannot stat %s\n", path);
     close(fd);
     return;
   }
 
-  switch(st.type) {
-    case T_DEVICE:
-    case T_FILE:
-      if (strcmp(fmtname(path), fmtname(fileName)) == 0)
-      {
-        printf("%s\n", fmtname(path));
-      }
-      break;
-    case T_DIR:
-      if(strlen(path) + 1 + DIRSIZ + 1 > sizeof buf){
-        printf("find: path too long\n");
-        break;
-      }
-      strcpy(buf, path);
-      p = buf + strlen(buf);
-      *p++ = '/';
-
-      while(read(fd, &de, sizeof(de)) == sizeof(de)){
-        if(de.inum == 0) {
-          continue;
-        }
-        printf("find: Got %s\n", fmtname(de.name));
-        if(strcmp(fmtname(de.name), fmtname(cwd)) == 0 || strcmp(fmtname(de.name), fmtname(pd)) == 0) {
-          continue;
-        }
-        memmove(p, de.name, DIRSIZ);
-        p[DIRSIZ] = 0;
-        if (stat(buf, &st) < 0) {
-          printf("find: cannot stat %s\n", buf);
-          continue;
-        }
-
-        find(buf, fileName);
-      }
-      break;
+  if (st.type == T_DIR) {
+    searchDir(path, buf, fd, st, search);
   }
+  close(fd);
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
-  if(argc < 3){
-    fprintf(2, "usage: find [dir] [file name]\n");
-    exit(1);
+  int i;
+
+  if(argc < 2){
+    printf("find: requires a file name to search for");
+  } else if (argc == 2) { // If no starting-point specified, '.' is assumed
+    find(".", argv[1]);
+  } else {
+    for (i = 2; i < argc; i++) {
+      find(argv[1], argv[i]);
+    }
   }
-
-  find(argv[1], argv[2]);
-
   exit(0);
 }
